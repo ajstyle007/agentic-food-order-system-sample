@@ -1,59 +1,60 @@
 from crewai import Crew, Process, Task
 from agents import order_intake_agent, menu_agent, confirmation_agent
-import os 
 
-#lets create crew
 food_ordering_crew = Crew(
     agents=[order_intake_agent, menu_agent, confirmation_agent],
-    process=Process.sequential, #first intake -> then menu -> then confirmation
+    process=Process.sequential,
     verbose=True,
-    memory=False,
-    embedder=None
+    memory=False
 )
 
 
 def run_order_crew(user_message: str, conversation_context: str = "", current_order: str = ""):
-    """This is main fucntion who will run full flow"""
+    """Main function to run the full agentic flow"""
+    
+    from crewai import Task
 
-    # Task 1: Order Intake
     task1 = Task(
-        description=f"""Previous Conversation Context:
-        {conversation_context}
+        description=f"""Previous Conversation:
+{conversation_context}
 
-        Current Active Order (if any):
-        {current_order}
+Latest User Message: "{user_message}"
 
-        Latest User Message: "{user_message}"
-
-        **Important Instructions:**
-        - Agar user confirmation de raha hai (yes, haan, confirm, place kar do, order kar do etc.) aur pehle se koi order summary hai, toh 'CONFIRMED' return karo.
-        - Warna normal order parse karo (items + quantity).""",
-        expected_output="Either 'CONFIRMED' or parsed order details",
+**Instructions:**
+- Agar user confirmation de raha hai (yes, haan, confirm, place kar do, krdo etc.) toh 'CONFIRMED' return karo.
+- Warna items + quantity parse karo.
+- Agar user location bata raha hai (Delhi, Mumbai, etc.) toh usko note karo.""",
+        expected_output="Parsed order details or 'CONFIRMED'",
         agent=order_intake_agent
     )
 
-    # Task 2: Menu & Restaurant Search
     task2 = Task(
-        description="""Agar user ne naya order diya hai toh menu search karo aur summary banao.
-        Agar 'CONFIRMED' hai toh is task ko skip karne ki koshish karo.""",
-        expected_output="Restaurant, items with price, total amount",
+        description="""User ke items ke hisaab se real restaurants search karo using Google Places API.
+        Best matching restaurant suggest karo.
+        Sirf ek best restaurant recommend karo, multiple mat dikhao.
+        Location agar mention na ho toh 'Delhi' assume karo.""",
+        expected_output="Best restaurant name, address, rating, items with approx price, total",
         agent=menu_agent
     )
 
-    # Task 3: Final Confirmation
     task3 = Task(
-        description="""Agar intake agent ne 'CONFIRMED' bola hai toh final message mein bol do:
-        "✅ Aapka order successfully placed ho gaya hai!"
+        description="""**Final Logic:**
+- Agar 'CONFIRMED' mila hai toh yeh message do:
+  "✅ Aapka order successfully placed ho gaya hai! 
+   Restaurant: [Name]
+   Total: ₹XXX 
+   Order ID: ORD-XXXX"
 
-        Warana normal summary dikhao aur confirmation maango.""",
-        expected_output="Final response to user",
+- Warna clear summary dikhao aur pucho:
+  "Kya aap is order ko confirm karna chahte hain? Ya koi change chahiye?"
+""",
+        expected_output="Clear summary with confirmation question or Order Placed message",
         agent=confirmation_agent
     )
 
-    # assign tasks to crew
     food_ordering_crew.tasks = [task1, task2, task3]
-
-    print("🚀 Order Processing start...\n")
+    
+    print("🚀 Processing your order with real restaurants...\n")
     result = food_ordering_crew.kickoff()
-
+    
     return result

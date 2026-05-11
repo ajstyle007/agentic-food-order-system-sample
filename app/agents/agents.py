@@ -4,7 +4,7 @@ from menu_data import get_all_menus
 from crewai import LLM
 from dotenv import load_dotenv
 import os
-from tools import search_menu, get_full_menu
+from tools import search_nearby_restaurants, get_restaurant_details
 
 load_dotenv()
 
@@ -36,7 +36,7 @@ menu_agent = Agent(
     backstory="""Tu bahut helpful aur flexible hai. Agar user 'butter naan' maange aur 'Naan' ho to 'Naan' suggest kar. 
     Hamesha price aur restaurant ke saath clear information de.""",
     llm=gemini_llm,
-    tools=[search_menu, get_full_menu],
+    tools=[search_nearby_restaurants, get_restaurant_details],
     verbose=True,
     allow_delegation=False
 )
